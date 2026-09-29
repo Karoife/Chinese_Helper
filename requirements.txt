@@ -1,0 +1,17 @@
+# Stage 1: database + Telegram text messages
+requests>=2.31
+PyYAML>=6.0
+python-dotenv>=1.0
+jieba>=0.42.1
+deep-translator>=1.11
+pypinyin>=0.51
+python-telegram-bot>=21.6
+APScheduler>=3.10
+tzdata>=2024.1
+
+# Stage 2: audio (added later)
+# edge-tts>=6.1
+# gTTS>=2.5
+
+# Stage 3: images (added later)
+# Pillow>=10.4
