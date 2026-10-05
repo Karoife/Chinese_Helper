@@ -14,6 +14,7 @@ from typing import List, Optional
 from data.models import Word
 
 _NOUN_POS = {"n", "ns", "nz", "ng", "nr", "nt", "nx"}
+_VERB_POS = {"v", "vd", "vn", "vg", "vi", "vq", "vshi", "vyou"}
 _CONTENT_POS = _NOUN_POS | {"v", "a", "vn", "an"}
 # Function-word tags: some entries carry a stray "n" from an unrelated rare
 # reading of the character (e.g. 的 is mostly the particle "u", but the
@@ -28,8 +29,9 @@ def pick_photo_keyword_word(words: List[Word]) -> Optional[Word]:
     nouns = [
         w
         for w in words
-        if (set((w.pos or "").split(",")) & _NOUN_POS)
-        and not (set((w.pos or "").split(",")) & _FUNCTION_POS)
+        if (pos_set := set((w.pos or "").split(","))) & _NOUN_POS
+        and not (pos_set & _FUNCTION_POS)
+        and not (pos_set & _VERB_POS)
     ]
     if not nouns:
         return None

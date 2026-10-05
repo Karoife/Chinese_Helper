@@ -114,7 +114,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "¡Bienvenido/a a tu práctica diaria de chino! 🀄\n\n"
         f"Nivel actual: HSK {state.level}\n"
         f"Modo: {_mode_label(state.mode)}\n"
-        f"Hora de envío: {state.send_time} ({state.timezone})\n\n"
+        "\n"
         "Usa los botones para estudiar o cambiar tu configuración. También puedes "
         "escribir /level, /time, /reset o /stop en el menú de comandos. Reiniciar "
         "borra el historial de estudio, pero conserva tu nivel y horario.",
@@ -355,8 +355,7 @@ async def voice_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
         f"Intento {attempt_number}: <b>{score}/100</b> de coincidencia aproximada.\n"
         f"Frase objetivo: {escape(session['chinese'])}\n"
         f"Pinyin: <i>{escape(session['pinyin'])}</i>\n"
-        f"Transcripción: {recognized}\n\n"
-        "Puedes enviar otro audio para repetir la misma frase, o terminar cuando quieras.",
+        f"Transcripción: {recognized}",
         reply_markup=stop_practice_keyboard(),
     )
 

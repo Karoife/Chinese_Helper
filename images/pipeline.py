@@ -24,7 +24,10 @@ def get_or_create_image(
     db_path: str, sentence: Sentence, words: List[Word]
 ) -> Optional[Tuple[Path, Optional[str]]]:
     card_word = pick_card_word(words)
-    cache_key = card_word.simplified if card_word else sentence.chinese
+    photo_word = pick_photo_keyword_word(words)
+    subject = photo_word.simplified if photo_word else (card_word.simplified if card_word else sentence.chinese)
+    strategy = "photo" if photo_word else "card"
+    cache_key = f"v3:{strategy}:{subject}"
 
     with db_session(db_path) as conn:
         cached = image_cache.get_cached(conn, cache_key)
@@ -34,7 +37,6 @@ def get_or_create_image(
     image_cache.IMAGE_DIR.mkdir(parents=True, exist_ok=True)
     file_hash = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()
 
-    photo_word = pick_photo_keyword_word(words)
     if photo_word is not None:
         keyword = image_search_keyword(photo_word)
         result = search_image(keyword)
