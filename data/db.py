@@ -41,6 +41,20 @@ CREATE TABLE IF NOT EXISTS sentence_words (
     PRIMARY KEY (sentence_id, word_id)
 );
 
+CREATE TABLE IF NOT EXISTS token_translation_cache (
+    simplified TEXT PRIMARY KEY,
+    pinyin TEXT NOT NULL,
+    spanish TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pronunciation_practice (
+    chat_id INTEGER PRIMARY KEY,
+    sentence_id INTEGER NOT NULL REFERENCES sentences (id) ON DELETE CASCADE,
+    started_at TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_score INTEGER
+);
+
 CREATE TABLE IF NOT EXISTS user_state (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     chat_id INTEGER,

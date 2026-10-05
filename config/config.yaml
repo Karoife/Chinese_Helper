@@ -1,21 +1,10 @@
-# Personal study configuration. Edit this file or use the bot commands
-# (/level, /time) to change these values at runtime -- the bot commands
-# update this same file so changes survive restarts.
-
 study:
-  # HSK level you are currently studying (1-9; 7 covers the combined HSK 3.0
-  # "7-9" band).
   level: 1
-  # "level_only": only sentences of exactly `level`.
-  # "level_and_below": sentences of `level` and every level below it.
-  mode: level_and_below
-  # Daily send time, 24h HH:MM, interpreted in `timezone` below.
-  send_time: "08:00"
+  mode: level_only
+  send_time: 08:00
   timezone: America/Costa_Rica
-
 database:
   path: storage/library.db
-
 logging:
   level: INFO
   file: storage/app.log

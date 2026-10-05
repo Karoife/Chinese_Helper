@@ -3,15 +3,20 @@ requests>=2.31
 PyYAML>=6.0
 python-dotenv>=1.0
 jieba>=0.42.1
+opencc-python-reimplemented>=0.1.7
 deep-translator>=1.11
 pypinyin>=0.51
 python-telegram-bot>=21.6
 APScheduler>=3.10
 tzdata>=2024.1
 
-# Stage 2: audio (added later)
-# edge-tts>=6.1
-# gTTS>=2.5
+# Stage 2: audio
+edge-tts>=6.1
+gTTS>=2.5
 
-# Stage 3: images (added later)
-# Pillow>=10.4
+# Stage 3: images
+Pillow>=10.4
+faster-whisper>=1.1
+huggingface-hub<1
+click<8.2
+av<17

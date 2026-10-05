@@ -15,12 +15,17 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from typing import List, Optional
 
 from data.sources.http_utils import download_bytes
 
 logger = logging.getLogger(__name__)
+
+_LOW_QUALITY_MEANING_RE = re.compile(
+    r"^(surname |old variant of|variant of|used in |also written)", re.IGNORECASE
+)
 
 BASE_URL = (
     "https://raw.githubusercontent.com/drkameleon/complete-hsk-vocabulary/main/wordlists"
@@ -48,11 +53,39 @@ class RawWord:
     frequency: Optional[int]
 
 
+def _is_low_quality_form(form: dict) -> bool:
+    """True if every meaning of this form is a rare/auxiliary note (surname,
+    variant of another character, etc.) rather than the word's real meaning.
+    """
+    meanings = form.get("meanings") or []
+    return bool(meanings) and all(_LOW_QUALITY_MEANING_RE.match(m) for m in meanings)
+
+
+def _pick_primary_form(forms: List[dict]) -> Optional[dict]:
+    """Prefer a common-word reading over a surname/proper-noun/variant one.
+
+    The source data doesn't order forms by frequency, so readings like
+    "Shuǐ" (surname) or a rare "yāo" (to coerce) can appear before the common
+    reading "shuǐ"/"yào". Among common-word (lowercase pinyin) forms with a
+    substantive meaning, the one with the most listed meanings is a good
+    proxy for "the common, central reading" of a polysemous character.
+    """
+    lowercase_forms = [
+        f for f in forms if ((f.get("transcriptions") or {}).get("pinyin") or "")[:1].islower()
+    ]
+    substantive_forms = [f for f in lowercase_forms if not _is_low_quality_form(f)]
+    if substantive_forms:
+        return max(substantive_forms, key=lambda f: len(f.get("meanings") or []))
+    if lowercase_forms:
+        return lowercase_forms[0]
+    return forms[0] if forms else None
+
+
 def _parse_entry(entry: dict, hsk_level: int) -> Optional[RawWord]:
     forms = entry.get("forms") or []
-    if not forms:
+    primary = _pick_primary_form(forms)
+    if primary is None:
         return None
-    primary = forms[0]
     pinyin = (primary.get("transcriptions") or {}).get("pinyin")
     meanings = primary.get("meanings") or []
     if not pinyin or not meanings:

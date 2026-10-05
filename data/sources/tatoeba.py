@@ -15,11 +15,14 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import jieba
+from opencc import OpenCC
 from pypinyin import Style, pinyin
 
 from data.sources.http_utils import download_bytes
 
 logger = logging.getLogger(__name__)
+
+_traditional_to_simplified = OpenCC("t2s").convert
 
 BASE_URL = "https://downloads.tatoeba.org/exports/per_language"
 CMN_SENTENCES_URL = f"{BASE_URL}/cmn/cmn_sentences.tsv.bz2"
@@ -74,15 +77,18 @@ def _load_links(url: str) -> List[Tuple[str, str]]:
 
 
 def sentence_pinyin(text: str) -> str:
-    """Word-aware pinyin: segment with jieba, then pinyin per segment."""
+    """Word-aware pinyin: segment with jieba, one space between every syllable
+    (and between segments), so mis-segmented tokens never merge visually.
+    """
     parts = []
     for token in jieba.cut(text):
         if all(ch in _PUNCTUATION for ch in token):
-            parts.append(token.strip())
+            if token.strip():
+                parts.append(token.strip())
         else:
             syllables = pinyin(token, style=Style.TONE, errors="ignore")
-            parts.append("".join(s[0] for s in syllables))
-    return " ".join(p for p in parts if p)
+            parts.extend(s[0] for s in syllables)
+    return " ".join(parts)
 
 
 def fetch_sentence_pairs() -> List[Tuple[str, str, str]]:
@@ -119,7 +125,9 @@ def classify_and_parse(
     """
     parsed: List[ParsedSentence] = []
     for source_id, chinese, spanish in pairs:
-        chinese = chinese.strip()
+        # Tatoeba's "cmn" (Mandarin) sentences may be written in Traditional
+        # script; normalize everything to Simplified as required by this app.
+        chinese = _traditional_to_simplified(chinese.strip())
         if not (MIN_SENTENCE_LENGTH <= len(chinese) <= MAX_SENTENCE_LENGTH):
             continue
 

@@ -31,7 +31,7 @@ def _setup_logging(level: str, log_file: str) -> None:
     )
 
 
-def build_words(db_path: str, limit: int | None) -> None:
+def build_words(db_path: str, limit: int | None, skip_translate: bool = False) -> None:
     raw_words = hsk_vocab.fetch_all_levels()
     if limit:
         raw_words = raw_words[:limit]
@@ -39,8 +39,20 @@ def build_words(db_path: str, limit: int | None) -> None:
         logger.error("No HSK words downloaded, skipping word import")
         return
 
-    logger.info("Translating %d word meanings to Spanish...", len(raw_words))
-    spanish = translate.translate_to_spanish([w.english for w in raw_words])
+    if skip_translate:
+        spanish = [None] * len(raw_words)
+    else:
+        logger.info("Translating %d word meanings to Spanish...", len(raw_words))
+        spanish = translate.translate_to_spanish([w.english for w in raw_words])
+        missing = sum(1 for s in spanish if s is None)
+        if missing:
+            logger.warning(
+                "%d/%d words could not be translated now; their Spanish meanings will be translated "
+                "on demand when they appear in lessons. Run `python -m data.build_library "
+                "--retry-translations` later to retry bulk translation.",
+                missing,
+                len(spanish),
+            )
 
     with db_session(db_path) as conn:
         for word, spanish_text in zip(raw_words, spanish):
@@ -109,10 +121,37 @@ def build_sentences(db_path: str, limit: int | None) -> None:
     logger.info("Imported %d sentences into the database", inserted)
 
 
+def backfill_translations(db_path: str, limit: int | None = None) -> None:
+    """Retry Spanish translation for words that don't have one yet."""
+    with db_session(db_path) as conn:
+        query = "SELECT id, english FROM words WHERE spanish IS NULL"
+        if limit:
+            query += f" LIMIT {int(limit)}"
+        rows = conn.execute(query).fetchall()
+
+    if not rows:
+        logger.info("No missing Spanish translations, nothing to do.")
+        return
+
+    logger.info("Retrying Spanish translation for %d words...", len(rows))
+    spanish = translate.translate_to_spanish([row["english"] for row in rows])
+
+    with db_session(db_path) as conn:
+        updated = 0
+        for row, spanish_text in zip(rows, spanish):
+            if spanish_text is None:
+                continue
+            conn.execute("UPDATE words SET spanish = ? WHERE id = ?", (spanish_text, row["id"]))
+            updated += 1
+    logger.info("Updated %d/%d words with a Spanish translation", updated, len(rows))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build/update the HSK study library")
     parser.add_argument("--skip-words", action="store_true")
     parser.add_argument("--skip-sentences", action="store_true")
+    parser.add_argument("--skip-translate", action="store_true", help="Import words without translating (faster, for testing)")
+    parser.add_argument("--retry-translations", action="store_true", help="Only retry missing Spanish translations and exit")
     parser.add_argument("--limit-words", type=int, default=None, help="For quick smoke tests")
     parser.add_argument("--limit-sentences", type=int, default=None, help="For quick smoke tests")
     args = parser.parse_args()
@@ -121,8 +160,12 @@ def main() -> None:
     _setup_logging(config.log_level, config.log_file)
     init_db(config.db_path)
 
+    if args.retry_translations:
+        backfill_translations(config.db_path, args.limit_words)
+        return
+
     if not args.skip_words:
-        build_words(config.db_path, args.limit_words)
+        build_words(config.db_path, args.limit_words, skip_translate=args.skip_translate)
     if not args.skip_sentences:
         build_sentences(config.db_path, args.limit_sentences)
 
