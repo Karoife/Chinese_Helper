@@ -46,6 +46,7 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton("🕒 Hora", callback_data="menu:time"),
             ],
             [InlineKeyboardButton("🗑 Reiniciar progreso", callback_data="action:reset")],
+            [InlineKeyboardButton("🧹 Vaciar chat", callback_data="action:clear_chat")],
         ]
     )
 
@@ -266,6 +267,14 @@ async def reset_progress_command(update: Update, context: ContextTypes.DEFAULT_T
     )
 
 
+async def clear_chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.effective_message.reply_text(
+        "Telegram no permite que el bot borre todo el historial del chat. "
+        "Para vaciarlo, abre el menú del chat en Telegram y elige «Vaciar chat» "
+        "o «Borrar historial». Esta acción la confirma Telegram."
+    )
+
+
 def _finish_practice(db_path: str, chat_id: int) -> str:
     with db_session(db_path) as conn:
         row = conn.execute(
@@ -294,7 +303,7 @@ async def voice_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
     with db_session(db_path) as conn:
         session = conn.execute(
             """
-            SELECT p.sentence_id, p.attempts, s.chinese
+            SELECT p.sentence_id, p.attempts, s.chinese, s.pinyin
             FROM pronunciation_practice p
             JOIN sentences s ON s.id = p.sentence_id
             WHERE p.chat_id = ?
@@ -309,9 +318,6 @@ async def voice_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     media = update.effective_message.voice or update.effective_message.audio
-    await update.effective_message.reply_text(
-        "Audio recibido. Estoy transcribiéndolo; el primer intento puede tardar mientras se prepara el modelo."
-    )
     audio_path = None
     try:
         telegram_file = await media.get_file()
@@ -348,6 +354,7 @@ async def voice_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
     await update.effective_message.reply_html(
         f"Intento {attempt_number}: <b>{score}/100</b> de coincidencia aproximada.\n"
         f"Frase objetivo: {escape(session['chinese'])}\n"
+        f"Pinyin: <i>{escape(session['pinyin'])}</i>\n"
         f"Transcripción: {recognized}\n\n"
         "Puedes enviar otro audio para repetir la misma frase, o terminar cuando quieras.",
         reply_markup=stop_practice_keyboard(),
@@ -364,6 +371,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         "action:review": review_command,
         "action:progress": progress_command,
         "action:reset": reset_progress_command,
+        "action:clear_chat": clear_chat_command,
     }
     if data in actions:
         await actions[data](update, context)
@@ -420,6 +428,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await query.message.reply_html(
             f"Práctica iniciada. Lee esta misma frase en voz alta y envíala como audio:\n\n"
             f"<b>{escape(sentence.chinese)}</b>\n"
+            f"<i>{escape(sentence.pinyin)}</i>\n"
             "Puedes repetirla cuantas veces quieras; pulsa «Terminar práctica» cuando decidas parar.",
             reply_markup=stop_practice_keyboard(),
         )

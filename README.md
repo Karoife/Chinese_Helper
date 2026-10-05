@@ -129,6 +129,10 @@ la hora configurada.
 | `/reset` | Abre una confirmación para borrar el historial y las prácticas activas |
 | `/stop` | Termina la práctica de pronunciación activa |
 
+El botón **Vaciar chat** explica cómo borrar el historial completo desde el
+menú de Telegram. La Bot API no permite que el bot consulte ni elimine todo
+el historial directamente.
+
 Cada frase (diaria, `/another` o `/review`) llega acompañada de:
 
 - Una **imagen**: primero se intenta encontrar una foto real y con licencia
@@ -156,8 +160,9 @@ Debajo de cada frase hay un botón **Practicar pronunciación**. Púlsalo y env�
 una nota de voz con esa frase; el bot te devuelve una puntuación aproximada de
 coincidencia entre la transcripción y el texto. Puedes enviar varios intentos:
 todos se comparan con la misma frase hasta pulsar **Terminar práctica** o usar
-`/stop`. La puntuación mide similitud del texto reconocido, no evalúa con
-precisión tonos ni calidad fonética.
+`/stop`. El pinyin aparece junto a la frase objetivo y no se envía un mensaje
+intermedio de recepción del audio. La puntuación mide similitud del texto
+reconocido, no evalúa con precisión tonos ni calidad fonética.
 
 El reconocimiento se ejecuta localmente con Whisper `base` y CPU, sin API de
 pago. La primera nota de voz descarga el modelo (aproximadamente 145 MB) y
